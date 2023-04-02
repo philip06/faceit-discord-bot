@@ -22,4 +22,4 @@ ie: https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot&perm
 
 ## Running the bot:
 
-`python3 gmu_bot.py`
+`python3 faceit_discord_bot.py`
