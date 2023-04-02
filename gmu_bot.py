@@ -29,6 +29,16 @@ async def on_message(message):
     if message.author == client.user:
         return
     
+    if message.content == '/help':
+        await message.channel.send(f"""
+        Command reference:
+        `/leaderboard` - Show Hub Leaderboard
+        `/stats` - Show Hub Stats
+        `/stats FACEIT_NAME` - Show overall stats for specific faceit player
+        `/matches` - List recent matches in hub
+        `/matches MATCH_ID` - Show detailed stats for specified match
+        """)
+    
     if message.content == '/leaderboard':
         ranking = faceit_data.hub_ranking(hub_id=hub_id, return_items=10)
         x = prettytable.PrettyTable(['Player', 'ELO', 'Points', 'Streak', 'Played', "Wins", "Draws", "Losses"])
@@ -95,5 +105,64 @@ async def on_message(message):
 
         await message.channel.send(f'```{out}```')
 
+    if message.content == '/matches':
+        hub_matches = faceit_data.hub_matches(hub_id=hub_id, type_of_match='past', return_items=10)
+        x = prettytable.PrettyTable(["Match Title", "Match ID", "Status"])
+
+        for match_details in hub_matches['items']:
+            team1 = match_details["teams"]["faction1"]
+            team2 = match_details["teams"]["faction2"]
+            score1 = 0
+            score2 = 0
+            match_status = match_details['status']
+            if "results" in match_details and match_status != "CANCELLED": 
+                score1 = match_details["results"]["score"]['faction1']
+                score2 = match_details["results"]["score"]['faction2']
+            match_title = f'{team1["name"]} {score1} vs {score2} {team2["name"]}'
+
+            x.add_row([match_title, match_details['match_id'], match_status])
+        
+        await message.channel.send(f'```{str(x)}```')
+
+    if message.content.startswith('/matches '):
+        match_id = message.content.split(" ")[1]
+
+        match_stats = faceit_data.match_stats(match_id=match_id)
+
+        team1 = prettytable.PrettyTable(["Player", "Kills", "Assists", "Deaths", "K/D", "K/R", "HS %", "MVPs"])
+        team2 = prettytable.PrettyTable(["Player", "Kills", "Assists", "Deaths", "K/D", "K/R", "HS %", "MVPs"])
+
+        score = match_stats['rounds'][0]['round_stats']['Score']
+
+        teams = match_stats['rounds'][0]['teams']
+
+        team1_name = teams[0]["team_stats"]["Team"]
+        team2_name = teams[1]["team_stats"]["Team"]
+
+        for player in teams[0]['players']:
+            team1.add_row([
+                player['nickname'], 
+                player['player_stats']['Kills'], 
+                player['player_stats']["Assists"], 
+                player['player_stats']["Deaths"], 
+                player['player_stats']["K/D Ratio"], 
+                player['player_stats']["K/R Ratio"], 
+                player['player_stats']["Headshots %"], 
+                player['player_stats']["MVPs"]
+            ])
+
+        for player in teams[1]['players']:
+            team2.add_row([
+                player['nickname'], 
+                player['player_stats']['Kills'], 
+                player['player_stats']["Assists"], 
+                player['player_stats']["Deaths"], 
+                player['player_stats']["K/D Ratio"], 
+                player['player_stats']["K/R Ratio"], 
+                player['player_stats']["Headshots %"], 
+                player['player_stats']["MVPs"]
+            ])
+
+        await message.channel.send(f'```{str(team1)}\n{team1_name}\n{score}\n{team2_name}\n{str(team2)}```')
 
 client.run(DISCORD_BOT_TOKEN)

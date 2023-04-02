@@ -31,16 +31,21 @@ class MatchWatcher(commands.Cog):
             match_title = f'{team1["name"]} {score1} vs {score2} {team2["name"]}'
             print(match_title)
 
-            x = prettytable.PrettyTable([f'{team1["name"]} {score1}', f'{score2} {team2["name"]}'])
-            for i, player in enumerate(team1["roster"]):
-                x.add_row([f'{player["game_player_name"]} - ELO {self.faceit_data.get_player_elo(player["player_id"])}', f'{team2["roster"][i]["game_player_name"]} - ELO {self.faceit_data.get_player_elo(team2["roster"][i]["player_id"])}'])
-            tables.append(str(x))
+            table1 = prettytable.PrettyTable(['Player', 'ELO'])
+            table2 = prettytable.PrettyTable(['Player', 'ELO'])
+            for player in team1["roster"]:
+                table1.add_row([player["game_player_name"], self.faceit_data.get_player_elo(player["player_id"])])
+
+            for player in team2["roster"]:
+                table2.add_row([player["game_player_name"], self.faceit_data.get_player_elo(player["player_id"])])
+            
+            tables.append(f'{table1}\n{team1["name"]}\n{score1} - {score2}\n{team2["name"]}\n{table2}')
         return tables
 
     @tasks.loop(seconds=30)
     async def watch_ongoing_matches(self):
         matches = self.get_matches()
-        output_tables = '\n'.join(self.format_tables(matches))
+        output_tables = '\n-----------------------------\n'.join(self.format_tables(matches))
         if self.scoreboard_message is None:
             self.scoreboard_message = await self.bot_channel.send(f'```{output_tables}```')
         else:
